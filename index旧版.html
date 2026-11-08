@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#667eea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="英语查询">
+<meta name="format-detection" content="telephone=no">
+<title>英语单词 / 短句查询</title>
+<style>
+  :root {
+    --bg1: #667eea;
+    --bg2: #764ba2;
+    --card: #ffffff;
+    --ink: #1f2430;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --warn: #ef4444;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 16px calc(48px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 640px;
+    position: relative;
+  }
+
+  h1 {
+    color: #fff;
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+
+  .subtitle {
+    color: rgba(255, 255, 255, 0.85);
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  /* ---- 搜索区 ---- */
+  .search-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+    display: flex;
+    gap: 10px;
+    position: relative;
+    z-index: 3;
+  }
+
+  .search-card input {
+    flex: 1;
+    min-width: 0;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 16px; /* ≥16px 避免 iOS 聚焦自动放大 */
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    color: var(--ink);
+  }
+
+  .search-card input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  }
+
+  .search-card button {
+    border: none;
+    border-radius: 12px;
+    padding: 0 26px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    transition: transform .1s, opacity .2s;
+    white-space: nowrap;
+  }
+
+  .search-card button:hover { transform: translateY(-1px); }
+  .search-card button:active { transform: translateY(0); }
+  .search-card button:disabled { opacity: .6; cursor: not-allowed; }
+
+  /* ---- 结果下拉面板 ---- */
+  .result-panel {
+    display: none;
+    margin-top: 14px;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+    position: relative;
+    z-index: 2;
+    animation: dropIn .28s ease;
+  }
+
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-panel.visible { display: block; }
+
+  /* 词头 */
+  .head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .head .word {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.1;
+    word-break: break-word;
+  }
+
+  .head .phonetic {
+    font-size: 18px;
+    color: var(--muted);
+    font-family: "Segoe UI", "Consolas", monospace;
+  }
+
+  .speak-btn {
+    border: none;
+    background: #eef2ff;
+    color: var(--accent);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    flex: none;
+  }
+
+  .speak-btn:hover { background: #e0e7ff; }
+  .speak-btn:active { transform: scale(.92); }
+
+  /* 区块 */
+  .section { margin-top: 18px; }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .translation {
+    font-size: 17px;
+    color: var(--ink);
+    line-height: 1.6;
+    background: #f6f7fb;
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 10px 10px 0;
+  }
+
+  .meaning {
+    margin-bottom: 16px;
+  }
+
+  .pos {
+    display: inline-block;
+    font-style: italic;
+    font-weight: 700;
+    color: var(--accent2);
+    background: #f3e8ff;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .def {
+    margin: 10px 0;
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .def::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 9px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .def .en { font-size: 15px; }
+  .def .zh { font-size: 14px; color: #374151; margin-top: 2px; }
+  .def .zh b { color: var(--accent2); font-weight: 700; }
+
+  .example {
+    margin-top: 8px;
+    margin-left: 4px;
+    color: var(--muted);
+    font-size: 14px;
+    padding-left: 12px;
+    border-left: 2px solid var(--line);
+  }
+
+  .example .ex-en { color: #374151; }
+  .example .ex-zh { color: var(--accent2); margin-top: 2px; display: block; }
+
+  .syn {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .syn b { color: var(--accent); font-weight: 600; }
+
+  /* 提示与错误 */
+  .notice {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .error-box {
+    margin-top: 14px;
+    background: #fef2f2;
+    color: var(--warn);
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .loading {
+    margin-top: 14px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 3px solid #d1d5db;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- 手机端优化 ---- */
+  @media (max-width: 480px) {
+    body { padding: 24px 12px calc(24px + env(safe-area-inset-bottom)); }
+    h1 { font-size: 24px; }
+    .subtitle { font-size: 13px; margin-bottom: 20px; }
+    .search-card { padding: 12px; border-radius: 16px; }
+    .search-card input { padding: 12px 14px; }
+    .search-card button { padding: 0 20px; }
+    .result-panel { padding: 16px; }
+    .head .word { font-size: 26px; }
+    .head .phonetic { font-size: 16px; }
+    .speak-btn { width: 46px; height: 46px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>🔍 英语查询</h1>
+    <p class="subtitle">输入英语单词或短句，获取音标、释义与例句</p>
+
+    <div class="search-card">
+      <input id="query" type="text" placeholder="输入英语单词或短句，如：hello" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button id="btn" type="button">翻译</button>
+    </div>
+
+    <div id="error" class="error-box" style="display:none;"></div>
+    <div id="loading" class="loading" style="display:none;"><span class="spinner"></span>查询中…</div>
+
+    <div id="result" class="result-panel"></div>
+  </div>
+
+<script>
+  const input = document.getElementById('query');
+  const btn = document.getElementById('btn');
+  const resultEl = document.getElementById('result');
+  const errorEl = document.getElementById('error');
+  const loadingEl = document.getElementById('loading');
+
+  const POS_ZH = {
+    noun: '名词', verb: '动词', adjective: '形容词', adverb: '副词',
+    pronoun: '代词', preposition: '介词', conjunction: '连词',
+    interjection: '感叹词', exclamation: '感叹词', numeral: '数词',
+    determiner: '限定词', article: '冠词', particle: '小品词', phrase: '短语'
+  };
+
+  function posZh(pos) { return POS_ZH[pos.toLowerCase()] || pos; }
+
+  function showError(msg) {
+    resultEl.classList.remove('visible');
+    resultEl.innerHTML = '';
+    errorEl.textContent = msg;
+    errorEl.style.display = 'block';
+  }
+
+  function hideError() { errorEl.style.display = 'none'; }
+
+  function setLoading(on) {
+    loadingEl.style.display = on ? 'block' : 'none';
+    btn.disabled = on;
+    btn.textContent = on ? '查询中…' : '翻译';
+  }
+
+  // 词典 API：返回数组或 null（未收录）
+  async function fetchDictionary(q) {
+    const url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(q);
+    const res = await fetch(url);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('dictionary status ' + res.status);
+    return res.json();
+  }
+
+  // 翻译 API（MyMemory，支持单词与短句）
+  async function fetchTranslation(q) {
+    const url = 'https://api.mymemory.translated.net/get?q=' +
+      encodeURIComponent(q) + '&langpair=en|zh-CN';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('translate status ' + res.status);
+    const data = await res.json();
+    return data && data.responseData ? data.responseData.translatedText : '';
+  }
+
+  // 并发受限的批量翻译，返回 {原文: 译文}
+  async function translateBatch(items, limit = 4) {
+    const map = {};
+    const queue = [...new Set(items.filter(Boolean))].slice(0, 12);
+    const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+      while (queue.length) {
+        const s = queue.shift();
+        try { map[s] = await fetchTranslation(s); } catch (e) { /* 单条失败不影响整体 */ }
+      }
+    });
+    await Promise.all(workers);
+    return map;
+  }
+
+  async function lookup() {
+    const q = input.value.trim();
+    if (!q) { showError('请输入英语单词或短句'); return; }
+    hideError();
+    setLoading(true);
+    resultEl.classList.remove('visible');
+    resultEl.innerHTML = '';
+
+    try {
+      let dict = null, audioUrl = '', phonetic = '';
+      try {
+        const entries = await fetchDictionary(q);
+        if (entries && entries.length) {
+          dict = entries[0];
+          phonetic = dict.phonetic ||
+            (dict.phonetics && dict.phonetics[0] && dict.phonetics[0].text) || '';
+          const withAudio = (dict.phonetics || []).find(p => p && p.audio);
+          if (withAudio) audioUrl = withAudio.audio;
+        }
+      } catch (e) {
+        // 词典失败不阻断，仍可尝试翻译
+      }
+
+      // 收集释义与例句原文
+      let defs = [], examples = [];
+      if (dict) {
+        (dict.meanings || []).forEach(m => {
+          (m.definitions || []).slice(0, 4).forEach(d => {
+            if (d.definition) defs.push(d.definition);
+            if (d.example) examples.push(d.example);
+          });
+        });
+      }
+
+      // 词头中文 + 释义中文 + 例句中文（并行）
+      let zh = '';
+      try { zh = await fetchTranslation(q); } catch (e) { zh = ''; }
+
+      const [zhDefs, zhEx] = await Promise.all([
+        translateBatch(defs),
+        translateBatch(examples)
+      ]);
+
+      render(q, dict, { phonetic, audioUrl, zh, zhDefs, zhEx });
+    } catch (e) {
+      showError('查询失败，请检查网络连接后重试。');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function render(q, dict, extra) {
+    const { phonetic, audioUrl, zh, zhDefs, zhEx } = extra;
+    let html = '';
+
+    // 词头
+    html += '<div class="head">';
+    html += '  <span class="word">' + escapeHtml(q) + '</span>';
+    if (phonetic) html += '  <span class="phonetic">' + escapeHtml(phonetic) + '</span>';
+    html += '  <button class="speak-btn" id="speak" title="播放发音" type="button">🔊</button>';
+    html += '</div>';
+
+    // 中文释义
+    if (zh) {
+      html += '<div class="section"><div class="section-title">📖 中文释义</div>';
+      html += '  <div class="translation">' + escapeHtml(zh) + '</div></div>';
+    }
+
+    // 词典条目
+    if (dict) {
+      html += '<div class="section"><div class="section-title">📚 解释与例句</div>';
+      const meanings = dict.meanings || [];
+      meanings.forEach(m => {
+        const pos = m.partOfSpeech || '';
+        const defs = m.definitions || [];
+        if (pos || defs.length) {
+          html += '<div class="meaning">';
+          if (pos) html += '  <span class="pos">' + escapeHtml(posZh(pos)) + ' <i>' + escapeHtml(pos) + '</i></span>';
+          defs.slice(0, 5).forEach(d => {
+            html += '  <div class="def"><div class="en">' + escapeHtml(d.definition) + '</div>';
+            const defZh = zhDefs[d.definition];
+            if (defZh && defZh !== d.definition) {
+              html += '    <div class="zh"><b>释义：</b>' + escapeHtml(defZh) + '</div>';
+            }
+            if (d.example) {
+              const exZh = zhEx[d.example];
+              html += '    <div class="example"><span class="ex-en">例：' + escapeHtml(d.example) + '</span>' +
+                (exZh && exZh !== d.example ? '<span class="ex-zh">' + escapeHtml(exZh) + '</span>' : '') + '</div>';
+            }
+            if (d.synonyms && d.synonyms.length) {
+              html += '    <div class="syn"><b>近义词：</b>' +
+                d.synonyms.slice(0, 6).map(s => escapeHtml(s)).join('、') + '</div>';
+            }
+            html += '  </div>';
+          });
+          html += '</div>';
+        }
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="notice">ℹ️ 该内容未找到词典条目，已按短句/短语翻译。</div>';
+    }
+
+    html += '<div class="notice">💡 单词可点击 🔊 听发音（英音）；短句仅提供中文翻译。</div>';
+
+    resultEl.innerHTML = html;
+    resultEl.classList.add('visible');
+
+    // 绑定发音
+    const speakBtn = document.getElementById('speak');
+    if (speakBtn) speakBtn.addEventListener('click', () => speak(q, audioUrl));
+  }
+
+  function speak(text, audioUrl) {
+    if (audioUrl) {
+      const a = new Audio(audioUrl);
+      a.play().catch(() => synthSpeak(text));
+    } else {
+      synthSpeak(text);
+    }
+  }
+
+  function synthSpeak(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-GB';
+    u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  btn.addEventListener('click', lookup);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+</script>
+</body>
+</html>
